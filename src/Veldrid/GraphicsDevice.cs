@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -1183,6 +1184,18 @@ namespace Veldrid
             uint height)
         {
             return new OpenGL.OpenGLGraphicsDevice(options, platformInfo, width, height);
+        }
+
+
+        public static GraphicsDevice CreateOpenGL(bool debug, Func<string, IntPtr> getProcAddressFunc, Size size, out Action render, out Action<uint> setFbo)
+        {
+            var device = new OpenGL.OpenGLGraphicsDevice(debug, getProcAddressFunc, size);
+
+            setFbo = fbo => device.DefaultFrameBufferId = fbo;
+
+            render = device.ExecuteOpenGlOnExternalThread;
+
+            return device;
         }
 
         /// <summary>

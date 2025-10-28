@@ -11,6 +11,7 @@ using Veldrid.OpenGL.EAGL;
 using static Veldrid.OpenGL.EGL.EGLNative;
 using NativeLibrary = NativeLibraryLoader.NativeLibrary;
 using System.Runtime.CompilerServices;
+using System.Drawing;
 
 namespace Veldrid.OpenGL
 {
@@ -66,6 +67,8 @@ namespace Veldrid.OpenGL
 
         private bool _syncToVBlank;
 
+        public uint DefaultFrameBufferId { get; set; } = 0;
+
         public override string DeviceName => _deviceName;
 
         public override string VendorName => _vendorName;
@@ -109,21 +112,43 @@ namespace Veldrid.OpenGL
 
         public StagingMemoryPool StagingMemoryPool => _stagingMemoryPool;
 
+        internal bool isExternalOpenGLThread = false;
+
+        public void ExecuteOpenGlOnExternalThread()
+        {
+            _executionThread.ExecuteOpenGlOnExternalThread();
+        }
+        public OpenGLGraphicsDevice(bool debug, Func<string, IntPtr> getProcAddressFunc, Size size)
+        {
+            isExternalOpenGLThread = true;
+            var options = new GraphicsDeviceOptions()
+            {
+                Debug = debug,
+                HasMainSwapchain = false,
+            };
+            Init(options, new OpenGLPlatformInfo(IntPtr.Zero,
+                getProcAddressFunc,
+                handle => { },
+                () => IntPtr.Zero,
+                () => { },
+                handle => { },
+                () => { },
+                sync => { },
+                () => { },
+                (width, height) => { }
+                ), (uint)size.Width, (uint)size.Height);
+        }
+
         public OpenGLGraphicsDevice(
             GraphicsDeviceOptions options,
             OpenGLPlatformInfo platformInfo,
             uint width,
             uint height)
         {
-            Init(options, platformInfo, width, height, true);
+            Init(options, platformInfo, width, height);
         }
 
-        private void Init(
-            GraphicsDeviceOptions options,
-            OpenGLPlatformInfo platformInfo,
-            uint width,
-            uint height,
-            bool loadFunctions)
+        private void Init(GraphicsDeviceOptions options, OpenGLPlatformInfo platformInfo, uint width, uint height)
         {
             _syncToVBlank = options.SyncToVerticalBlank;
             _glContext = platformInfo.OpenGLContextHandle;
@@ -607,7 +632,7 @@ namespace Veldrid.OpenGL
                 setSwapchainFramebuffer,
                 resizeSwapchain);
 
-            Init(options, platformInfo, (uint)fbWidth, (uint)fbHeight, false);
+            Init(options, platformInfo, (uint)fbWidth, (uint)fbHeight);
         }
 
         private void InitializeANativeWindow(
@@ -735,7 +760,7 @@ namespace Veldrid.OpenGL
                 swapBuffers,
                 setSync);
 
-            Init(options, platformInfo, swapchainDescription.Width, swapchainDescription.Height, true);
+            Init(options, platformInfo, swapchainDescription.Width, swapchainDescription.Height);
         }
 
         private static int GetDepthBits(PixelFormat value)
@@ -1137,9 +1162,12 @@ namespace Veldrid.OpenGL
                 _workItems = workItems;
                 _makeCurrent = makeCurrent;
                 _context = context;
-                Thread thread = new Thread(Run);
-                thread.IsBackground = true;
-                thread.Start();
+                if (_gd.isExternalOpenGLThread == false)
+                {
+                    Thread thread = new Thread(Run);
+                    thread.IsBackground = true;
+                    thread.Start();
+                }
             }
 
             private void Run()
@@ -1148,6 +1176,16 @@ namespace Veldrid.OpenGL
                 while (!_terminated)
                 {
                     ExecutionThreadWorkItem workItem = _workItems.Take();
+                    ExecuteWorkItem(workItem);
+                }
+            }
+
+            public void ExecuteOpenGlOnExternalThread()
+            {
+                if (_gd.isExternalOpenGLThread == false)
+                    return;
+                while(_workItems.TryTake(out var workItem))
+                {
                     ExecuteWorkItem(workItem);
                 }
             }

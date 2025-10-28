@@ -37,6 +37,7 @@ namespace Veldrid.OpenGL
         private bool _graphicsPipelineActive;
         private bool _vertexLayoutFlushed;
 
+        
         public OpenGLCommandExecutor(OpenGLGraphicsDevice gd, OpenGLPlatformInfo platformInfo)
         {
             _gd = gd;
@@ -433,7 +434,7 @@ namespace Veldrid.OpenGL
                 }
                 else
                 {
-                    glBindFramebuffer(FramebufferTarget.Framebuffer, 0);
+                    glBindFramebuffer(FramebufferTarget.Framebuffer, _gd.DefaultFrameBufferId);
                     CheckLastError();
                 }
 
