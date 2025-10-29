@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Veldrid.OpenGL;
 
 namespace Veldrid
 {
@@ -1187,13 +1188,9 @@ namespace Veldrid
         }
 
 
-        public static GraphicsDevice CreateOpenGL(bool debug, Func<string, IntPtr> getProcAddressFunc, Size size, out Action render, out Action<uint> setFbo)
+        public static GraphicsDevice CreateOpenGL(bool debug, Func<string, IntPtr> getProcAddressFunc, Size size, IExternalOpenGLThreadCallback externalOpenGLThreadCallback)
         {
-            var device = new OpenGL.OpenGLGraphicsDevice(debug, getProcAddressFunc, size);
-
-            setFbo = fbo => device.DefaultFrameBufferId = fbo;
-
-            render = device.ExecuteOpenGlOnExternalThread;
+            var device = new OpenGL.OpenGLGraphicsDevice(debug, getProcAddressFunc, size, externalOpenGLThreadCallback);
 
             return device;
         }

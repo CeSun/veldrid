@@ -112,15 +112,16 @@ namespace Veldrid.OpenGL
 
         public StagingMemoryPool StagingMemoryPool => _stagingMemoryPool;
 
-        internal bool isExternalOpenGLThread = false;
+        internal bool isExternalOpenGLThread => externalOpenGLThreadCallback != null;
 
         public void ExecuteOpenGlOnExternalThread()
         {
             _executionThread.ExecuteOpenGlOnExternalThread();
         }
-        public OpenGLGraphicsDevice(bool debug, Func<string, IntPtr> getProcAddressFunc, Size size)
+        IExternalOpenGLThreadCallback? externalOpenGLThreadCallback;
+        public OpenGLGraphicsDevice(bool debug, Func<string, IntPtr> getProcAddressFunc, Size size, IExternalOpenGLThreadCallback externalOpenGLThreadCallback)
         {
-            isExternalOpenGLThread = true;
+            this.externalOpenGLThreadCallback = externalOpenGLThreadCallback;
             var options = new GraphicsDeviceOptions()
             {
                 Debug = debug,
@@ -137,6 +138,9 @@ namespace Veldrid.OpenGL
                 () => { },
                 (width, height) => { }
                 ), (uint)size.Width, (uint)size.Height);
+            externalOpenGLThreadCallback.OnOpenGLThreadExcecute += _executionThread.ExecuteOpenGlOnExternalThread;
+            externalOpenGLThreadCallback.OnFrameBufferSizeChanged += size => ((OpenGLSwapchainFramebuffer)SwapchainFramebuffer).Resize((uint)size.Width, (uint)size.Height);
+            externalOpenGLThreadCallback.OnSetOpenGLFramebuffer += id => DefaultFrameBufferId = id;
         }
 
         public OpenGLGraphicsDevice(
