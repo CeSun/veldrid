@@ -125,7 +125,8 @@ namespace Veldrid.OpenGL
             var options = new GraphicsDeviceOptions()
             {
                 Debug = debug,
-                HasMainSwapchain = false,
+                HasMainSwapchain = true,
+                SwapchainDepthFormat = PixelFormat.D24_UNorm_S8_UInt,
             };
             Init(options, new OpenGLPlatformInfo(IntPtr.Zero,
                 getProcAddressFunc,
